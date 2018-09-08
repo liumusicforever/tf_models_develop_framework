@@ -31,11 +31,13 @@ def lastlayer2detection(lastlayer , thresh = 0.5):
     
     pred_boxes = lastlayer[res_idx[:4]]
     # pred_boxes : (num_boxes , 4(tx,ty,tw,th,...))
-    pred_boxes[...,0:2] = (pred_boxes[...,0:2] + Cxy) / lastlayer.shape[1:3]
-    pred_boxes[...,2:4] = (pred_boxes[...,2:4] * Pwh) 
+    xycen = (pred_boxes[...,0:2] + Cxy) / lastlayer.shape[1:3]
+    xywh = (pred_boxes[...,2:4] * Pwh) 
+
+    xymin = xycen - (xywh/2)
+    xymax = xycen + (xywh/2)
     
-    xymin = pred_boxes[...,0:2] - (pred_boxes[...,2:4]/2)
-    xymax = pred_boxes[...,0:2] + (pred_boxes[...,2:4]/2)
+
     cord= np.stack((xymin , xymax ), axis=1).reshape(-1,4).tolist()
     clss = np.argmax(pred_boxes[...,5:], -1).tolist()
     # cord : (num_boxes , 4)
@@ -81,6 +83,7 @@ def detection2lastlayer(detection , out_shapes = (4,4)):
 
     boxes_cen = (detection[...,3:5] + detection[...,1:3]) / 2
     boxes_grid_idx = (boxes_cen / (1.0 / out_shapes)).astype(np.int8).astype(np.float)
+
     # boxes_grid_idx : (batch_size , num_boxes , w and h grid id)
     boxes_xy_offset = (boxes_cen - (boxes_grid_idx/out_shapes))*out_shapes
     # boxes_xy_offset : (batch_size , num_boxes , offset x y)
@@ -117,7 +120,9 @@ def detection2lastlayer(detection , out_shapes = (4,4)):
     inter_region = inter_w * inter_h
     # inter_region : (batch_size, num_boxes , num_anchor, region_size)
     iou = inter_region / (boxes_region + anchors_region - inter_region)
+    
     best_iou = np.argmax(iou, axis=2)
+
     # best_iou : (batch_size , num_boxes , which anchor is most close to detection)
     
     # Define final output space 
@@ -131,8 +136,15 @@ def detection2lastlayer(detection , out_shapes = (4,4)):
     # bgi_dim : (batch_size , num_boxes , w and h grid id)
     for batch_idx in range(bgi_dim[0]):
         for box_idx in range(bgi_dim[1]):
+            # region size of box
+            box_region = boxes_region[batch_idx ,box_idx , 0 , 0]
+            # skip padding blank boxes
+            if not box_region > 10e-9:
+                continue
+                
             cols, rows = [int(i) for i in boxes_grid_idx[batch_idx , box_idx ,:2]]
             anchor_idx = best_iou[batch_idx , box_idx , 0]
+            
             
             # compute box offset of w , h 
             box_wh = boxes_wh[batch_idx,box_idx,:,:]
@@ -145,14 +157,10 @@ def detection2lastlayer(detection , out_shapes = (4,4)):
             # box one hot of classes 
             box_clss_one_hot = boxes_clss_one_hot[batch_idx , box_idx , :]
             
-            # region size of box
-            box_region = boxes_region[batch_idx ,box_idx , 0 , 0]
+            
             
             # merge [x , y , w , h , prob , clss1 , clss2 ...]
-            if box_region > 0.0:
-                merge_arrs = (box_xy_offset ,box_wh_offset , [1], box_clss_one_hot)
-            else:
-                merge_arrs = (box_xy_offset ,box_wh_offset , [0], box_clss_one_hot)
+            merge_arrs = (box_xy_offset ,box_wh_offset , [1], box_clss_one_hot)
             pred = np.concatenate(merge_arrs, axis=0)
             lastlayer[batch_idx , cols , rows , anchor_idx , :] = pred
     

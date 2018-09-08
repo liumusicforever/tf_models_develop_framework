@@ -77,7 +77,7 @@ def create_tfrecord(rec_path , dataset , aug = None):
 def labelname2clssid(label):
     for i,box in enumerate(label):
         clss_name = box[0]
-        clss_id = params.classes_mapping['person']
+        clss_id = params.classes_mapping[clss_name]
         label[i][0] = clss_id
     return label
 
@@ -98,13 +98,15 @@ def load_image(path,label,aug):
     if not aug:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = cv2.resize(img, (720,720))
-        xmin , ymin ,xmax ,ymax = label[1:]
-        xmin = min(max(xmin,0),0.999)
-        ymin = min(max(ymin,0),0.999)
-        xmax = max(min(xmax,0.999),0)
-        ymax = max(min(ymax,0.999),0)
-        label = [label[i][0],xmin,ymin,xmax,ymax]
-        return img , label
+        new_label = []
+        for i in range(len(label)):
+            xmin , ymin ,xmax ,ymax = label[i][1:]
+            xmin = min(max(xmin,0),0.999)
+            ymin = min(max(ymin,0),0.999)
+            xmax = max(min(xmax,0.999),0)
+            ymax = max(min(ymax,0.999),0)
+            new_label.append([label[i][0],xmin,ymin,xmax,ymax])
+        return img , new_label
     else:
         # insert boxes location into imgaug
         box_axis = [ia.BoundingBox(
@@ -179,8 +181,17 @@ def parser(record):
     
     return image, label
 
+RANDOM_SEED = 0
+CURRENT_SIZE = random.choice(params.training_scale)
 def resize_in_batch(image , label):
-    in_size = random.choice(params.training_scale)
+    global RANDOM_SEED , CURRENT_SIZE
+    if RANDOM_SEED < params.change_steps:
+        RANDOM_SEED += 1
+    else:
+        CURRENT_SIZE = random.choice(params.training_scale)
+        RANDOM_SEED = 0
+        
+    in_size = CURRENT_SIZE
     print ('training with size : {}'.format(in_size))
     
     new_image = []
@@ -189,7 +200,6 @@ def resize_in_batch(image , label):
         new_image.append(img)
 
     label_size = int(in_size/32)    
-    
     label = region_layer.detection2lastlayer(
                         label , 
                         out_shapes = (label_size,label_size))
