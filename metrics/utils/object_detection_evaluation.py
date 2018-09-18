@@ -34,10 +34,10 @@ import logging
 import unicodedata
 import numpy as np
 
-from core import standard_fields
-from utils import label_map_util
-from utils import metrics
-from utils import per_image_evaluation
+import metrics.core.standard_fields as standard_fields
+import metrics.utils.label_map_util as label_map_util
+import metrics.utils.metrics as metrics
+import metrics.utils.per_image_evaluation as per_image_evaluation
 
 
 class DetectionEvaluator(object):

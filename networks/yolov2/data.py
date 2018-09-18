@@ -23,7 +23,20 @@ def _float32_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
 
-def create_tfrecord(rec_path , dataset , aug = None):
+# defind data augmentation pipe line
+aug = iaa.Sequential([
+    iaa.Multiply((1.2, 1.5)), # change brightness, doesn't affect BBs
+    iaa.Fliplr(0.5),
+    iaa.Crop(percent=(0, 0.2)), # random crops
+    iaa.GaussianBlur(sigma=(0, 0.5)),
+    iaa.Affine(
+        scale={"x": (0.9, 1.3), "y": (0.9, 1.3)},
+        translate_percent={"x": (-0.03, 0.03), "y": (-0.03, 0.03)},
+        rotate=(-10, 10),
+        )
+])
+
+def create_tfrecord(rec_path , dataset):
     
     '''
     dataset : (num_example , [path , bboxes])
@@ -32,24 +45,10 @@ def create_tfrecord(rec_path , dataset , aug = None):
     '''
     # create tf record writer
     writer = tf.python_io.TFRecordWriter(rec_path)
-    
-    if aug:
-        # defind data augmentation pipe line
-        aug = iaa.Sequential([
-            iaa.Multiply((1.2, 1.5)), # change brightness, doesn't affect BBs
-            iaa.Fliplr(0.5),
-            iaa.Crop(percent=(0, 0.15)), # random crops
-            iaa.GaussianBlur(sigma=(0, 0.5)),
-            iaa.Affine(
-                scale={"x": (0.6, 1), "y": (0.6, 1)},
-                translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
-                rotate=(-10, 10),
-                )
-        ])
-    
+
     for i,(image_filename, label) in enumerate(dataset):
         
-        image , label = load_image(image_filename,label,aug)
+        image , label = load_image(image_filename,label)
         image_string = image.tostring()
         
         height, width, depth = image.shape
@@ -89,68 +88,42 @@ def labelpadding(label,max_num_boxes = 200):
         new_label.append([0.0,0.0,0.0,0.0,0.0])
         
     return new_label
-def load_image(path,label,aug):
+def load_image(path,label):
     # read an image and resize to (224, 224)
     # cv2 load images as BGR, convert it to RGB
     img = cv2.imread(path)
     height, width, depth = img.shape
-    
-    if not aug:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(img, (720,720))
-        new_label = []
-        for i in range(len(label)):
-            xmin , ymin ,xmax ,ymax = label[i][1:]
-            xmin = min(max(xmin,0),0.999)
-            ymin = min(max(ymin,0),0.999)
-            xmax = max(min(xmax,0.999),0)
-            ymax = max(min(ymax,0.999),0)
-            new_label.append([label[i][0],xmin,ymin,xmax,ymax])
-        return img , new_label
-    else:
-        # insert boxes location into imgaug
-        box_axis = [ia.BoundingBox(
-                        x1=b[1]*width, 
-                        y1=b[2]*height, 
-                        x2=b[3]*width, 
-                        y2=b[4]*height) for b in label]
-        bbs = ia.BoundingBoxesOnImage(box_axis , shape=img.shape)
-        
-        seq = aug
-        
-        seq_det = seq.to_deterministic()
-        
-        image_aug = seq_det.augment_images([img])[0]
-        bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
-        
-        h, w, d = img.shape
-        label_aug = []
-        for i in range(len(bbs_aug.bounding_boxes)):
-            box = bbs_aug.bounding_boxes[i]
-            clss = label[i][0]
-            xmin = min(max(box.x1/w,0),0.999)
-            ymin = min(max(box.y1/h,0),0.999)
-            xmax = max(min(box.x2/w,0.999),0)
-            ymax = max(min(box.y2/h,0.999),0)
-            label_aug.append([clss , xmin, ymin , xmax , ymax])
-            
-        # for b in label:
-        #     print (b)
-        #     cv2.rectangle(img,(int(b[1]*width),int(b[2]*height)),(int(b[3]*width),int(b[4]*height)),(55,255,155),5)
-            
-        # for b in label_aug:
-        #     print (b)
-        #     cv2.rectangle(image_aug,(int(b[1]*w),int(b[2]*h)),(int(b[3]*w),int(b[4]*h)),(55,255,155),5)
-        
-        # cv2.imshow('a',img)
-        # cv2.imshow('image_aug',image_aug)
-        # cv2.waitKey(0)
-    if img is None:
-        return None
-    image_aug = cv2.cvtColor(image_aug, cv2.COLOR_BGR2RGB)
-    image_aug = cv2.resize(image_aug, (720,720))
 
-    return image_aug , label_aug
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (720,720))
+    new_label = []
+    for i in range(len(label)):
+        xmin , ymin ,xmax ,ymax = label[i][1:]
+        xmin = min(max(xmin,0),0.999)
+        ymin = min(max(ymin,0),0.999)
+        xmax = max(min(xmax,0.999),0)
+        ymax = max(min(ymax,0.999),0)
+        new_label.append([label[i][0],xmin,ymin,xmax,ymax])
+
+    # for b in label:
+    #     print (b)
+    #     cv2.rectangle(img,(int(b[1]*width),int(b[2]*height)),(int(b[3]*width),int(b[4]*height)),(55,255,155),5)
+        
+    # for b in label_aug:
+    #     print (b)
+    #     cv2.rectangle(image_aug,(int(b[1]*w),int(b[2]*h)),(int(b[3]*w),int(b[4]*h)),(55,255,155),5)
+    
+    # cv2.imshow('a',img)
+    # cv2.imshow('image_aug',image_aug)
+    # cv2.waitKey(0)
+
+
+    return img , new_label
+    
+        
+            
+        
+    
 
 def parser(record):
     
@@ -206,7 +179,41 @@ def resize_in_batch(image , label):
     label = np.array(label,dtype = np.float32)
 
     return new_image , label
+
+def aug_in_batch(image,label):
+
+    img = image
+    height, width, depth = img.shape
+    # insert boxes location into imgaug
+    box_axis = [ia.BoundingBox(
+                    x1=int(b[1]*width),
+                    y1=int(b[2]*height),
+                    x2=int(b[3]*width),
+                    y2=int(b[4]*height)) for b in label]
+    bbs = ia.BoundingBoxesOnImage(box_axis , shape=img.shape)
     
+    seq = aug
+    
+    seq_det = seq.to_deterministic()
+    
+    image_aug = seq_det.augment_images([img])[0]
+    bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
+    
+    h, w, d = img.shape
+    label_aug = []
+    for i in range(len(bbs_aug.bounding_boxes)):
+        box = bbs_aug.bounding_boxes[i]
+        clss = label[i][0]
+        xmin = min(max(box.x1/w,0),0.999)
+        ymin = min(max(box.y1/h,0),0.999)
+        xmax = max(min(box.x2/w,0.999),0)
+        ymax = max(min(box.y2/h,0.999),0)
+        label_aug.append([clss , xmin, ymin , xmax , ymax])
+
+        
+    image_aug = np.array(image_aug,dtype = np.float32)
+    label_aug = np.array(label_aug,dtype = np.float32)
+    return image_aug ,label_aug
 
 def input_fn(data_dir ,
              batch_size,
@@ -219,7 +226,16 @@ def input_fn(data_dir ,
     dataset = tf.data.TFRecordDataset(filenames=filenames)
     dataset = dataset.map(parser,num_parallel_calls = 16)
     dataset = dataset.repeat(num_epochs)  # repeat for multiple epochs
-    
+
+
+    # Data argumetation during training
+    dataset = dataset.map(
+                lambda image , label: 
+                tuple(tf.py_func(aug_in_batch, 
+                      [image , label],
+                      [tf.float32, tf.float32])),
+                num_parallel_calls=16).prefetch(16)
+
     dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
     
     
@@ -227,6 +243,8 @@ def input_fn(data_dir ,
 
     if is_shuffle:
         dataset = dataset.shuffle(20)
+
+
     
     # Mutiple scale during training
     dataset = dataset.map(
@@ -234,7 +252,7 @@ def input_fn(data_dir ,
                 tuple(tf.py_func(resize_in_batch, 
                       [image , label],
                       [tf.float32, tf.float32])),
-                num_parallel_calls=32).prefetch(32)
+                num_parallel_calls=16).prefetch(16)
 
     return dataset
 

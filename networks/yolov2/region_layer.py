@@ -40,6 +40,7 @@ def lastlayer2detection(lastlayer , thresh = 0.5):
 
     cord= np.stack((xymin , xymax ), axis=1).reshape(-1,4).tolist()
     clss = np.argmax(pred_boxes[...,5:], -1).tolist()
+    clss_prop = np.max(pred_boxes[...,5:], -1).tolist()
     # cord : (num_boxes , 4)
     # clss : (num_boxes , 1)
     
@@ -55,7 +56,7 @@ def lastlayer2detection(lastlayer , thresh = 0.5):
         batch_prediction = []
         if batch_idx in batch_idxs:
             for i in range(batch_num_boxes[batch_idxs.index(batch_idx)]):                 
-                batch_prediction.append([clss[box_id]] + cord[box_id])
+                batch_prediction.append([clss[box_id]] + [clss_prop[box_id]] + cord[box_id])
                 box_id += 1
         detection.append(batch_prediction)
     

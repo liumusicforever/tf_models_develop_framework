@@ -16,9 +16,9 @@
 import numpy as np
 import tensorflow as tf
 
-from core import standard_fields
-from utils import object_detection_evaluation
-import coco_tools
+import metrics.core.standard_fields as standard_fields
+import metrics.utils.object_detection_evaluation as object_detection_evaluation
+import metrics.coco_tools as coco_tools
 
 
 

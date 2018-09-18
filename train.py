@@ -55,8 +55,8 @@ def main():
     
     
     estimator = tf.estimator.Estimator(
-                    model_fn=tf.contrib.estimator.replicate_model_fn(mod_graph.model_fn),
-                    # model_fn=mod_graph.model_fn,
+#                     model_fn=tf.contrib.estimator.replicate_model_fn(mod_graph.model_fn),
+                    model_fn=mod_graph.model_fn,
                     params = params.network_params ,
                     config=config,
                 )
@@ -71,11 +71,11 @@ def main():
                                                is_shuffle = True))
     
     # Evaluate the model on the test set
-    tf.logging.info("Evaluation on test set.")
-    estimator.evaluate(lambda: data_iter.input_fn(args.data_dir,
-                                                  params.batch_size,
-                                                  record_name = "train.tfrecord",
-                                                  is_shuffle = False))
+#     tf.logging.info("Evaluation on test set.")
+#     estimator.evaluate(lambda: data_iter.input_fn(args.data_dir,
+#                                                   params.batch_size,
+#                                                   record_name = "val.tfrecord",
+#                                                   is_shuffle = False))
     
 if __name__ == "__main__":
     main()

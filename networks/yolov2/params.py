@@ -1,5 +1,5 @@
 
-batch_size = 20
+batch_size = 10
 save_summary_steps = 50
 num_epochs = 160
 pre_trained = 'experiments/yolov2_pretrained/model.ckpt-197655'
@@ -11,7 +11,7 @@ network_params = {
 
 # For multiple scale training
 change_steps = 50
-training_scale = [416,480,544,608,672]
+training_scale = [608]
 
 # For yolov2 loss
 object_scale = 5

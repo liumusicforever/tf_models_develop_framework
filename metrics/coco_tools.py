@@ -50,7 +50,7 @@ from pycocotools import mask
 
 import tensorflow as tf
 
-from utils import json_utils
+import metrics.utils.json_utils as json_utils
 
 
 class COCOWrapper(coco.COCO):

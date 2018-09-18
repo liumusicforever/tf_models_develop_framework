@@ -16,7 +16,7 @@
 """Numpy BoxMaskList classes and functions."""
 
 import numpy as np
-from utils import np_box_list
+import metrics.utils.np_box_list as np_box_list
 
 
 class BoxMaskList(np_box_list.BoxList):

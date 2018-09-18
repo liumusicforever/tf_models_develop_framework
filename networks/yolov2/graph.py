@@ -1,5 +1,14 @@
+import uuid
+
+import numpy as np
 import tensorflow as tf
+
 import networks.yolov2.params as config
+
+import networks.yolov2.region_layer as region_layer
+import metrics.core.standard_fields as standard_fields
+import metrics.coco_evaluation as coco_evaluation
+
 
 slim = tf.contrib.slim
 
@@ -109,7 +118,7 @@ def model_fn(features, labels, mode , params):
         optimizer = tf.train.MomentumOptimizer(learning_rate=params["lr"], momentum=0.9)
     
         # mutiple gpu training require
-        optimizer = tf.contrib.estimator.TowerOptimizer(optimizer)
+#         optimizer = tf.contrib.estimator.TowerOptimizer(optimizer)
         
         grads_and_vars = optimizer.compute_gradients(loss, train_vars)
         clipped_grads_and_vars = [(tf.clip_by_norm(grad, 11), var) for grad, var in grads_and_vars]
@@ -132,13 +141,10 @@ def model_fn(features, labels, mode , params):
                                           predictions=prediction,
                                           training_hooks = [logging_hook])
     
-    fp_rate , miss_rate = yolov2_eval(prediction , labels)
-
-    metrics = {'miss rate': miss_rate,
-               'fp rate': fp_rate}
+    eval_metric_ops = yolov2_eval(prediction , labels)
     
     return tf.estimator.EstimatorSpec(
-      mode=mode, loss=loss,predictions = prediction ,  eval_metric_ops=metrics)
+      mode=mode, loss=loss,predictions = prediction ,  eval_metric_ops=eval_metric_ops)
 
 
 
@@ -285,90 +291,60 @@ def yolov2_eval(pred , target , thresh = 0.5):
     '''
     
     
-    target_dims = tf.shape(target)
-    pred_dims = pred.get_shape().as_list()
     
+    image_ids,pred_clss,pred_prob,pred_boxes,target_clss,target_boxes = tf.py_func(
+                   py_fun_yolo_eval, 
+                   inp = [pred , target], 
+                   Tout = [tf.string,tf.float64,tf.float64,tf.int64,tf.float64,tf.int64])
     
-    detectors_mask = target[..., 4:5]
-    matching_classes = target[..., 5:]
-    matching_boxes = target[..., 0:4]
-    pred_confidence = pred[..., 4:5]
-    pred_class_prob = pred[..., 5:]
-    pred_boxes = pred[..., 0:4]
+    category_list = [{'id':str(clss_id) , 'name':clss_name} for clss_name,clss_id in config.classes_mapping.items()]
+    coco_evaluator = coco_evaluation.CocoDetectionEvaluator(category_list)
+    input_data_fields = standard_fields.InputDataFields
+    detection_fields = standard_fields.DetectionResultFields
     
-    # Got Cxy and Pwh
-    final_dim = tf.stack([-1, target_dims[1], target_dims[2]])
-    Cxy = tf.reshape(tf.range(target_dims[1]* target_dims[2]) , shape = final_dim)
-    cx = tf.expand_dims(tf.cast(Cxy % target_dims[2],tf.float32),-1)
-    cy = tf.expand_dims(tf.cast(tf.cast(Cxy / target_dims[1] ,tf.int32),tf.float32),-1)
-    Cxy = tf.concat([cx,cy],-1) 
-    Cxy = tf.expand_dims(Cxy , 3)
-    # Cxy : [1, H, W, 1, 2]
-    
-    anchors = tf.cast(config.anchors , dtype=tf.float32)
-    anchors = tf.expand_dims(tf.expand_dims(tf.expand_dims(anchors , 0) , 0) , 0)
-    Pwh = anchors
-    # Pwh : [1, H, W, 5, 2]
-    
-    # Find IOU of each predicted box with each ground truth box.
-    true_xy = (target[..., 0:2] + Cxy)/ tf.cast(tf.shape(Cxy)[1:3],tf.float32)
-    true_wh = target[..., 2:4] * Pwh
-    pred_xy = (pred[..., 0:2] + Cxy)/ tf.cast(tf.shape(Cxy)[1:3],tf.float32)
-    pred_wh = (pred[..., 2:4] * Pwh)
-    
-    true_wh_half = true_wh / 2.
-    true_mins = true_xy - true_wh_half
-    true_maxes = true_xy + true_wh_half
-    
-    pred_wh_half = pred_wh / 2.
-    pred_mins = pred_xy - pred_wh_half
-    pred_maxes = pred_xy + pred_wh_half
-    
-    # compute intersect areas
-    intersect_mins = tf.maximum(pred_mins, true_mins)
-    intersect_maxes = tf.minimum(pred_maxes, true_maxes)
-    intersect_wh = tf.maximum(intersect_maxes - intersect_mins, 0.)
-    intersect_areas = intersect_wh[..., 0] * intersect_wh[..., 1]
-    
-    
-    pred_areas = pred_wh[..., 0] * pred_wh[..., 1]
-    true_areas = true_wh[..., 0] * true_wh[..., 1]
+    image_ids.set_shape([None])
+    eval_dict = {
+        input_data_fields.key: image_ids,
+        input_data_fields.groundtruth_boxes: target_boxes,
+        input_data_fields.groundtruth_classes: target_clss,
+        detection_fields.detection_boxes: pred_boxes,
+        detection_fields.detection_scores: pred_prob,
+        detection_fields.detection_classes: pred_clss
+    }
+    eval_metric_ops = coco_evaluator.get_estimator_eval_metric_ops(eval_dict)
 
-    union_areas = pred_areas + true_areas - intersect_areas
-    iou_scores = intersect_areas / (union_areas + 1e-20)
-    iou_scores = tf.cast(iou_scores > 0.5, dtype = tf.float32)
-    # iou thresh
-    
-    # got location where predicted and labeled
-    pred_conf = pred[...,4] * iou_scores
-    true_conf = target[...,4]
-    
-    # got where object locate
-    pred_box_idx = tf.where(pred_conf>thresh)
-    true_box_idx = tf.where(true_conf>thresh)
-    
-    # on prediction map : obj = 1 , no_obj = 0
-    pred_conf = tf.cast(pred_conf > thresh, dtype = tf.float32)
-    true_conf = tf.cast(true_conf > thresh, dtype = tf.float32)
-    
-    
-    miss_map = pred_conf - true_conf
-    fp = tf.where(tf.equal(miss_map , 1))
-    miss = tf.where(tf.equal(miss_map , -1))
-    
-    
-    pred_boxes = tf.gather_nd(pred,pred_box_idx)
-    true_boxes = tf.gather_nd(target , true_box_idx)
-    
-    
-    fp_rate = tf.shape(fp)[0] / tf.shape(pred_boxes)[0] 
-    miss_rate = tf.shape(miss)[0] / tf.shape(true_boxes)[0]
-    
-    return  fp_rate , miss_rate
+
+
+    return  eval_metric_ops
     
     
     
+def py_fun_yolo_eval(pred , target, thresh = 0.5):
     
+    
+    pred_boxes = region_layer.lastlayer2detection(pred,thresh)
+    target_boxes = region_layer.lastlayer2detection(target,thresh)
+    
+    
+    #padding
+    max_num_boxes = 20
+    for num_batch in range(len(pred_boxes)):
+        for i in range(max_num_boxes - len(pred_boxes[num_batch])):
+            pred_boxes[num_batch].append([0.0,0.0,0.0,0.0,0.0,0.0])
+        for i in range(max_num_boxes - len(target_boxes[num_batch])):
+            target_boxes[num_batch].append([0.0,0.0,0.0,0.0,0.0,0.0])
+    pred_boxes = np.array(pred_boxes)
+    target_boxes = np.array(target_boxes)
+    
+    image_ids = np.array([str(uuid.uuid4()) for i in range(len(pred_boxes))])
+    pred_clss = pred_boxes[...,0]
+    pred_prob = pred_boxes[...,1]
+    pred_boxes = np.array(pred_boxes[...,2:] * 200,dtype = np.int)
+    target_clss = target_boxes[...,0]
+    target_boxes = np.array(target_boxes[...,2:] * 200 ,dtype = np.int)
+
+    
+    return [image_ids,pred_clss,pred_prob,pred_boxes,target_clss,target_boxes]
     
     
 

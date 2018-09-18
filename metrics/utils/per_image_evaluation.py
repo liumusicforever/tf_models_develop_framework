@@ -22,10 +22,10 @@ on object masks.
 """
 import numpy as np
 
-from utils import np_box_list
-from utils import np_box_list_ops
-from utils import np_box_mask_list
-from utils import np_box_mask_list_ops
+import metrics.utils.np_box_list as np_box_list
+import metrics.utils.np_box_list_ops as np_box_list_ops
+import metrics.utils.np_box_mask_list as np_box_mask_list
+import metrics.utils.np_box_mask_list_ops as np_box_mask_list_ops
 
 
 class PerImageEvaluation(object):
