@@ -60,17 +60,32 @@ def main():
                     params = params.network_params ,
                     config=config,
                 )
+    
+    train_input_fn = lambda: data_iter.input_fn(args.data_dir,
+                        params.batch_size,
+                        params.num_epochs,
+                        record_name = "train.tfrecord",
+                        is_shuffle = True)
+    
+    eval_input_fn = lambda: data_iter.input_fn(args.data_dir,
+                        params.batch_size,
+                        record_name = "val.tfrecord",
+                        is_shuffle = False)
+    
+    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=100000000)
+    eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn,start_delay_secs=1,throttle_secs=300)
+    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
     
-    # Train the model
-    tf.logging.info("Starting training for {} epoch(s).".format(params.num_epochs))
-    estimator.train(lambda: data_iter.input_fn(args.data_dir,
-                                               params.batch_size,
-                                               params.num_epochs,
-                                               record_name = "train.tfrecord",
-                                               is_shuffle = True))
+#     # Train the model
+#     tf.logging.info("Starting training for {} epoch(s).".format(params.num_epochs))
+#     estimator.train(lambda: data_iter.input_fn(args.data_dir,
+#                                                params.batch_size,
+#                                                params.num_epochs,
+#                                                record_name = "train.tfrecord",
+#                                                is_shuffle = True))
     
-    # Evaluate the model on the test set
+#     # Evaluate the model on the test set
 #     tf.logging.info("Evaluation on test set.")
 #     estimator.evaluate(lambda: data_iter.input_fn(args.data_dir,
 #                                                   params.batch_size,
