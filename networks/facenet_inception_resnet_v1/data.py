@@ -2,7 +2,9 @@ from __future__ import print_function
 
 import os
 import cv2
+import numpy as np
 import tensorflow as tf
+from imgaug import augmenters as iaa
 
 
 # binary data type
@@ -72,6 +74,22 @@ def parser(record):
     
     return image, label
 
+seq = iaa.Sequential([
+    iaa.Crop(px=(0, 16)), # crop images from each side by 0 to 16px (randomly chosen)
+    iaa.Fliplr(0.5), # horizontally flip 50% of the images
+    iaa.GaussianBlur(sigma=(0, 1.0)) # blur images with a sigma of 0 to 3.0
+])
+
+def aug_in_batch(image,label):
+    
+    image_aug = seq.augment_images([image])[0]
+    image_aug = cv2.resize(image_aug, (160, 160), interpolation=cv2.INTER_CUBIC)
+    
+    image_aug = np.array(image_aug,dtype = np.float32)
+
+    
+    return image_aug ,label
+
 
 def input_fn(data_dir ,
              batch_size,
@@ -84,7 +102,14 @@ def input_fn(data_dir ,
     dataset = tf.data.TFRecordDataset(filenames=filenames)
     dataset = dataset.map(parser,num_parallel_calls = 8)
     dataset = dataset.repeat(num_epochs)  # repeat for multiple epochs
-        
+    
+    # Data argumetation during training
+    dataset = dataset.map(
+                lambda image , label: 
+                tuple(tf.py_func(aug_in_batch, 
+                      [image , label],
+                      [tf.float32, tf.int32])))
+
     dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
 
     if is_shuffle:

@@ -12,6 +12,7 @@ slim = tf.contrib.slim
 def model_fn(features, labels, mode , params):
     """Model function for CNN."""
     
+    features.set_shape([None,160,160,3])
     
     if mode != tf.estimator.ModeKeys.PREDICT:
         phase_train_placeholder = True
@@ -50,7 +51,8 @@ def model_fn(features, labels, mode , params):
       "classes": tf.argmax(input=logits, axis=1),
       # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
       # `logging_hook`.
-      "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
+      "probabilities": tf.nn.softmax(logits, name="softmax_tensor"),
+      "embeddings" : embeddings
     }
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
@@ -61,8 +63,8 @@ def model_fn(features, labels, mode , params):
     prelogits_center_loss, _ = facenet.center_loss(prelogits, labels, config.center_loss_alfa, config.num_classes)
     tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * config.center_loss_factor)
 
-    global_step = tf.Variable(0,dtype = tf.float32)
-    learning_rate = tf.train.exponential_decay(config.lr, global_step,
+#     global_step = tf.Variable(0,dtype = tf.float32)
+    learning_rate = tf.train.exponential_decay(config.lr, tf.train.get_global_step(),
         config.learning_rate_decay_epochs*config.epoch_size, config.learning_rate_decay_factor, staircase=True)
 
 
@@ -85,7 +87,7 @@ def model_fn(features, labels, mode , params):
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
         
-#         train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
+        train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
 #         # Build a Graph that trains the model with one batch of examples and updates the model parameters
         train_op = facenet.train(total_loss, tf.train.get_global_step(), config.optimizer, 

@@ -72,8 +72,8 @@ def main():
                         record_name = "val.tfrecord",
                         is_shuffle = False)
     
-    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=100000000)
-    eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn,start_delay_secs=1,throttle_secs=300)
+    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=1000000000)
+    eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
     

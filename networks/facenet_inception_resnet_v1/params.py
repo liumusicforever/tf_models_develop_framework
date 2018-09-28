@@ -1,6 +1,6 @@
 batch_size = 180
 save_summary_steps = 50
-num_epochs = 80
+num_epochs = 1
 
 network_params = {
 
@@ -11,7 +11,8 @@ lr = 0.1
 keep_probability = 1.0
 embedding_size = 512
 weight_decay = 0.0
-num_classes = 702
+# num_classes = 702
+num_classes = 752
 prelogits_norm_p = 1.0
 prelogits_norm_loss_factor = 0.0
 center_loss_alfa = 0.95
@@ -22,4 +23,3 @@ learning_rate_decay_factor = 1.0
 optimizer = "ADAM"
 moving_average_decay = 0.9999
 log_histograms = True
-
