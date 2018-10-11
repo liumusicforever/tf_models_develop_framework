@@ -36,6 +36,8 @@ def parse_args():
     
 def main():
     tf.reset_default_graph()
+    
+    tf.set_random_seed(1234)
     tf.logging.set_verbosity(tf.logging.INFO)
     
     args = parse_args()
@@ -48,7 +50,7 @@ def main():
 
     # Define the model
     tf.logging.info("Creating the model...")
-    config = tf.estimator.RunConfig(tf_random_seed=230,
+    config = tf.estimator.RunConfig(tf_random_seed=1234,
                                     model_dir=args.log_dir,
                                     save_summary_steps=params.save_summary_steps,
                                     session_config = sess_config)
@@ -61,29 +63,29 @@ def main():
                     config=config,
                 )
     
-    train_input_fn = lambda: data_iter.input_fn(args.data_dir,
-                        params.batch_size,
-                        params.num_epochs,
-                        record_name = "train.tfrecord",
-                        is_shuffle = True)
+#     train_input_fn = lambda: data_iter.input_fn(args.data_dir,
+#                         params.batch_size,
+#                         params.num_epochs,
+#                         record_name = "train.tfrecord",
+#                         is_shuffle = True)
     
-    eval_input_fn = lambda: data_iter.input_fn(args.data_dir,
-                        params.batch_size,
-                        record_name = "val.tfrecord",
-                        is_shuffle = False)
+#     eval_input_fn = lambda: data_iter.input_fn(args.data_dir,
+#                         params.batch_size,
+#                         record_name = "val.tfrecord",
+#                         is_shuffle = False)
     
-    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=1000000000)
-    eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn)
-    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+#     train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=1000000000)
+#     eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn)
+#     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
     
 #     # Train the model
-#     tf.logging.info("Starting training for {} epoch(s).".format(params.num_epochs))
-#     estimator.train(lambda: data_iter.input_fn(args.data_dir,
-#                                                params.batch_size,
-#                                                params.num_epochs,
-#                                                record_name = "train.tfrecord",
-#                                                is_shuffle = True))
+    tf.logging.info("Starting training for {} epoch(s).".format(params.num_epochs))
+    estimator.train(lambda: data_iter.input_fn(args.data_dir,
+                                               params.batch_size,
+                                               params.num_epochs,
+                                               record_name = "train.tfrecord",
+                                               is_shuffle = False))
     
 #     # Evaluate the model on the test set
 #     tf.logging.info("Evaluation on test set.")
