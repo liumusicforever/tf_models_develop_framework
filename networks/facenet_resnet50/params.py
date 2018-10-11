@@ -1,4 +1,4 @@
-batch_size = 180
+batch_size = 75
 save_summary_steps = 50
 num_epochs = 15
 
@@ -14,9 +14,9 @@ weight_decay = 0.0
 # num_classes = 702
 num_classes = 752
 prelogits_norm_p = 1.0
-prelogits_norm_loss_factor = 0.0
-center_loss_alfa = 0.95
-center_loss_factor = 0.0
+prelogits_norm_loss_factor = 5e-4
+center_loss_alfa = 0.5
+center_loss_factor = 0.1
 learning_rate_decay_epochs = 100
 epoch_size = 1000
 learning_rate_decay_factor = 1.0
