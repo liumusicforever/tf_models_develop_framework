@@ -1,6 +1,6 @@
 batch_size = 75
 save_summary_steps = 50
-num_epochs = 15
+num_epochs = 25
 
 network_params = {
 
