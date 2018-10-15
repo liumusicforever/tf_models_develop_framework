@@ -11,6 +11,7 @@ example_text = '''example:
 
 python3 create_tfrecord.py --networks networks/mlp_classifier --data_dir data/mnist --dataset dataset/classification.py
 python3 create_tfrecord.py --networks networks/yolov2/ --data_dir /root/data/VOCdevkit/VOC2012/ --dataset dataset/pascal_voc.py --split 5 --record_name train.tfrecord
+python3 create_tfrecord.py --networks networks/facenet_resnet50/ --data_dir /root/data/Market-1501-v15.09.15/pytorch/train/ --dataset dataset/classification.py
 
 '''
 
