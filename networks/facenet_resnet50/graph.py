@@ -18,11 +18,11 @@ def model_fn(features, labels, mode , params):
     """Model function for CNN."""
     
     # Subtracts the given means from each image channel.
-    features.set_shape([None,160,160,3])
+    features.set_shape([None,224,224,3])
     num_channels = features.get_shape().as_list()[-1]
     channels = tf.split(axis=3, num_or_size_splits=num_channels, value=features)
     for i in range(num_channels):
-        channels[i] -= MEANS[i]
+        channels[i] = (channels[i] - (MEANS[i]/255.0))*255.0
     features = tf.concat(axis=3, values=channels)
     
     if mode != tf.estimator.ModeKeys.PREDICT:
@@ -35,6 +35,7 @@ def model_fn(features, labels, mode , params):
                                                 is_training=phase_train_placeholder,
                                                 global_pool=True,
                                                 spatial_squeeze = False)
+    
     if config.pre_trained:
         exclude = []
         variables_to_restore = tf.contrib.slim.get_variables_to_restore(exclude=exclude)
@@ -43,8 +44,13 @@ def model_fn(features, labels, mode , params):
                           {v.name.split(':')[0]: v for v in variables_to_restore})
             
     net = slim.flatten(net)
-    prelogits = slim.fully_connected(net, config.embedding_size, activation_fn=None, 
-                        scope='Bottleneck', reuse=False)
+    
+    prelogits = slim.fully_connected(net, config.embedding_size, 
+                        scope='Bottleneck',
+                        reuse=False)
+    prelogits = slim.dropout(prelogits, keep_prob=0.5,
+                                           is_training=phase_train_placeholder,
+                                           scope='dropout')
     
     
     logits = slim.fully_connected(prelogits, config.num_classes, activation_fn=None, 
@@ -107,7 +113,7 @@ def model_fn(features, labels, mode , params):
         train_op = facenet.train(total_loss, tf.train.get_global_step(), config.optimizer, 
             config.lr, config.moving_average_decay, tf.global_variables(), config.log_histograms)
         
-        logging_hook = tf.train.LoggingTensorHook({"loss" : total_loss}, every_n_iter=1)
+        logging_hook = tf.train.LoggingTensorHook({"loss" : total_loss,"acc":accuracy}, every_n_iter=1)
         
         return tf.estimator.EstimatorSpec(mode=mode, 
                                           loss=total_loss, 

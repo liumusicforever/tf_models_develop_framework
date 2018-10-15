@@ -85,14 +85,14 @@ def main():
                                                params.batch_size,
                                                params.num_epochs,
                                                record_name = "train.tfrecord",
-                                               is_shuffle = False))
+                                               is_shuffle = True))
     
 #     # Evaluate the model on the test set
 #     tf.logging.info("Evaluation on test set.")
-#     estimator.evaluate(lambda: data_iter.input_fn(args.data_dir,
-#                                                   params.batch_size,
-#                                                   record_name = "val.tfrecord",
-#                                                   is_shuffle = False))
+    estimator.evaluate(lambda: data_iter.input_fn(args.data_dir,
+                                                  params.batch_size,
+                                                  record_name = "val.tfrecord",
+                                                  is_shuffle = False))
     
 if __name__ == "__main__":
     main()

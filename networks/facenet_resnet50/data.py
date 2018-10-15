@@ -83,7 +83,7 @@ seq = iaa.Sequential([
 def aug_in_batch(image,label):
     
     image_aug = seq.augment_images([image])[0]
-    image_aug = cv2.resize(image_aug, (160, 160), interpolation=cv2.INTER_CUBIC)
+    image_aug = cv2.resize(image_aug, (224, 224), interpolation=cv2.INTER_CUBIC)
     
     image_aug = np.array(image_aug,dtype = np.float32)
 
@@ -113,7 +113,7 @@ def input_fn(data_dir ,
     dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
 
     if is_shuffle:
-        dataset = dataset.shuffle(3)
+        dataset = dataset.shuffle(30)
 
     return dataset
 

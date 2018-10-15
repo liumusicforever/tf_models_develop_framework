@@ -204,10 +204,10 @@ def train(total_loss, global_step, optimizer, learning_rate, moving_average_deca
     variable_averages = tf.train.ExponentialMovingAverage(
         moving_average_decay, global_step)
     variables_averages_op = variable_averages.apply(tf.trainable_variables())
-  
-    with tf.control_dependencies([apply_gradient_op, variables_averages_op]):
+    
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies([apply_gradient_op, variables_averages_op]+update_ops):
         train_op = tf.no_op(name='train')
-  
     return train_op
 
 def prewhiten(x):
