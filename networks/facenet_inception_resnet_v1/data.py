@@ -53,7 +53,7 @@ def load_image(path):
         return None
     
     
-    img = cv2.resize(img, (160, 160), interpolation=cv2.INTER_CUBIC)
+    img = cv2.resize(img, (320, 320), interpolation=cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
     return img
@@ -68,7 +68,7 @@ def parser(record):
     image = tf.decode_raw(parsed["image_string"], tf.uint8)
     
     image = tf.cast(image, tf.float32)
-    image = tf.reshape(image, shape=[160, 160, 3])
+    image = tf.reshape(image, shape=[320, 320, 3])
     image = image / 255.0
     label = tf.cast(parsed["label"], tf.int32)
     
