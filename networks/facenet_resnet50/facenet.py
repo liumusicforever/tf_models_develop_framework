@@ -176,19 +176,28 @@ def train(total_loss, global_step, optimizer, learning_rate, moving_average_deca
         elif optimizer=='ADADELTA':
             opt = tf.train.AdadeltaOptimizer(learning_rate, rho=0.9, epsilon=1e-6)
         elif optimizer=='ADAM':
-            opt = tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999, epsilon=0.1)
+            opt_backbone = tf.train.AdamOptimizer(learning_rate * 0.1, beta1=0.9, beta2=0.999, epsilon=0.1)
+            opt_lastlayer = tf.train.AdamOptimizer(learning_rate, beta1=0.9, beta2=0.999, epsilon=0.1)
         elif optimizer=='RMSPROP':
             opt = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=1.0)
         elif optimizer=='MOM':
             opt = tf.train.MomentumOptimizer(learning_rate, 0.9, use_nesterov=True)
         else:
             raise ValueError('Invalid optimization algorithm')
-    
-        grads = opt.compute_gradients(total_loss, update_gradient_vars)
+        # print (update_gradient_vars[0])
+
+        backbone_vars = [i for i in update_gradient_vars if 'resnet_v2_50/' in i.name]
+        last_vars = [i for i in update_gradient_vars if 'resnet_v2_50/' not in i.name]
         
+        backbone_grads = opt_backbone.compute_gradients(total_loss, backbone_vars)
+        lastlayer_grads = opt_lastlayer.compute_gradients(total_loss, last_vars)
+
+
     # Apply gradients.
-    apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
-  
+    op_backbone = opt_backbone.apply_gradients(backbone_grads, global_step=global_step)
+    op_lastlayer = opt_lastlayer.apply_gradients(lastlayer_grads, global_step=global_step)
+    apply_gradient_op = tf.group(op_backbone, op_lastlayer)
+
     # Add histograms for trainable variables.
     if log_histograms:
         for var in tf.trainable_variables():
@@ -196,7 +205,7 @@ def train(total_loss, global_step, optimizer, learning_rate, moving_average_deca
    
     # Add histograms for gradients.
     if log_histograms:
-        for grad, var in grads:
+        for grad, var in backbone_grads:
             if grad is not None:
                 tf.summary.histogram(var.op.name + '/gradients', grad)
   
