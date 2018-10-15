@@ -45,18 +45,19 @@ def model_fn(features, labels, mode , params):
             
     net = slim.flatten(net)
     
-    prelogits = slim.fully_connected(net, config.embedding_size, 
-                        scope='Bottleneck',
-                        reuse=False)
+    with slim.arg_scope([slim.batch_norm], is_training=phase_train_placeholder):
+        prelogits = slim.fully_connected(net, config.embedding_size, 
+                            scope='Bottleneck',
+                            reuse=False)
+        
     prelogits = slim.dropout(prelogits, keep_prob=0.5,
                                            is_training=phase_train_placeholder,
                                            scope='dropout')
-    
-    
-    logits = slim.fully_connected(prelogits, config.num_classes, activation_fn=None, 
-                weights_initializer=slim.initializers.xavier_initializer(), 
-                weights_regularizer=slim.l2_regularizer(config.weight_decay),
-                scope='Logits', reuse=False)
+    with slim.arg_scope([slim.batch_norm], is_training=phase_train_placeholder):
+        logits = slim.fully_connected(prelogits, config.num_classes, activation_fn=None, 
+                    weights_initializer=slim.initializers.xavier_initializer(), 
+                    weights_regularizer=slim.l2_regularizer(config.weight_decay),
+                    scope='Logits', reuse=False)
     
     embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
     
