@@ -181,7 +181,8 @@ def train(total_loss, global_step, optimizer, learning_rate, moving_average_deca
         elif optimizer=='RMSPROP':
             opt = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=1.0)
         elif optimizer=='MOM':
-            opt = tf.train.MomentumOptimizer(learning_rate, 0.9, use_nesterov=True)
+            opt_backbone = tf.train.MomentumOptimizer(learning_rate * 0.1, 0.9, use_nesterov=True)
+            opt_lastlayer = tf.train.MomentumOptimizer(learning_rate, 0.9, use_nesterov=True)
         else:
             raise ValueError('Invalid optimization algorithm')
         # print (update_gradient_vars[0])

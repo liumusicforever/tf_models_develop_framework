@@ -20,6 +20,6 @@ center_loss_factor = 0.1
 learning_rate_decay_epochs = 100
 epoch_size = 1000
 learning_rate_decay_factor = 1.0
-optimizer = "ADAM"
+optimizer = "MOM"
 moving_average_decay = 0.9999
 log_histograms = True

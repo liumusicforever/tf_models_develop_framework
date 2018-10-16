@@ -49,7 +49,7 @@ def gen_feat(img_list,image_op,sess,embeddings):
     for i,(img_path,clss_id,cam_id) in enumerate(img_list):
         print ('{}/{}'.format(i,len(img_list)))
         img = cv2.imread(img_path)
-        img = cv2.resize(img, (160, 160), interpolation=cv2.INTER_CUBIC)
+        img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_CUBIC)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img / 255.0
         feats = sess.run(embeddings,feed_dict = {image_op : [img]})
@@ -83,7 +83,7 @@ def main():
     mod_graph , data_iter , params = utils.load_network(args.networks)
 
     # create loss graph
-    image_op = tf.placeholder("float", [None,160,160,3]) 
+    image_op = tf.placeholder("float", [None,224,224,3]) 
     label_op = None
 
     mod = mod_graph.model_fn(image_op,label_op,
