@@ -68,12 +68,12 @@ def model_fn(features, labels, mode, params):
         total_loss = tf.reduce_mean(cross_entropy, name='cross_entropy')
 
         learning_rate = tf.train.exponential_decay(config.lr, tf.train.get_global_step(),
-                                                   config.learning_rate_decay_epochs*config.epoch_size, config.learning_rate_decay_factor, staircase=True)
+                                                   config.learning_rate_decay_iter, config.learning_rate_decay_factor, staircase=True)
 
         opt_backbone = tf.train.MomentumOptimizer(
-            config.lr * 0.1, 0.9, use_nesterov=True)
+            learning_rate * 0.1, 0.9, use_nesterov=True)
         opt_lastlayer = tf.train.MomentumOptimizer(
-            config.lr, 0.9, use_nesterov=True)
+            learning_rate, 0.9, use_nesterov=True)
         backbone_vars = [
             i for i in tf.trainable_variables() if 'resnet_v2_50/' in i.name]
         last_vars = [
