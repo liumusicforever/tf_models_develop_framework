@@ -1,8 +1,8 @@
 import tensorflow as tf
 
 
-import networks.resnet50.resnet_v2 as resnet_v2
-import networks.resnet50.params as config
+import networks.resnet50_selfatten.resnet_v2 as resnet_v2
+import networks.resnet50_selfatten.params as config
 
 
 slim = tf.contrib.slim
@@ -43,6 +43,8 @@ def model_fn(features, labels, mode, params):
         tf.train.init_from_checkpoint(config.pre_trained,
                                       {v.name.split(':')[0]: v for v in variables_to_restore})
     net = slim.flatten(net)
+
+    '''End of resnet50 backbone feature extraction'''
 
     logits = classifier(net, phase_train_placeholder)
 

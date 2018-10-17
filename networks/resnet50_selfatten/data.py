@@ -123,6 +123,6 @@ def input_fn(data_dir,
         tf.contrib.data.batch_and_drop_remainder(batch_size))
 
     if is_shuffle:
-        dataset = dataset.shuffle(10)
+        dataset = dataset.shuffle(30)
 
     return dataset

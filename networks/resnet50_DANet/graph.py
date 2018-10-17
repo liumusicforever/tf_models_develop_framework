@@ -2,9 +2,9 @@ import tensorflow as tf
 
 
 
-import networks.facenet_resnet50.resnet_v2 as resnet_v2
-import networks.facenet_resnet50.params as config
-import networks.facenet_resnet50.facenet as facenet
+import networks.resnet50_DANet.resnet_v2 as resnet_v2
+import networks.resnet50_DANet.params as config
+import networks.resnet50_DANet.facenet as facenet
 
 
 slim = tf.contrib.slim

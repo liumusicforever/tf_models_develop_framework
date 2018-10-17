@@ -7,7 +7,8 @@ network_params = {
 }
 
 pre_trained = '/root/dennis_code_base/tf_models_develop_framework/experiments/facenet_resnet50_pretrained/resnet_v2_50.ckpt'
-lr = 0.01
+lr = 0.001
+
 
 num_classes = 752
 learning_rate_decay_epochs = 100
