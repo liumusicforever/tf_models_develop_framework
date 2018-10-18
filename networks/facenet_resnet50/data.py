@@ -101,7 +101,7 @@ def input_fn(data_dir ,
     if len(filenames) == 0:
         raise ("your input data_dir is not inclue record file ")
     dataset = tf.data.TFRecordDataset(filenames=filenames)
-    dataset = dataset.map(parser,num_parallel_calls = 8)
+    dataset = dataset.map(parser,num_parallel_calls = 32)
     dataset = dataset.repeat(num_epochs)  # repeat for multiple epochs
     
     # Data argumetation during training
@@ -109,7 +109,8 @@ def input_fn(data_dir ,
                 lambda image , label: 
                 tuple(tf.py_func(aug_in_batch, 
                       [image , label],
-                      [tf.float32, tf.int32])))
+                      [tf.float32, tf.int32])),
+                num_parallel_calls=64).prefetch(225)
 
     dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
 
