@@ -84,7 +84,7 @@ seq = iaa.Sequential([
 def aug_in_batch(image,label):
     
     image_aug = seq.augment_images([image])[0]
-    image_aug = cv2.resize(image_aug, (224, 224), interpolation=cv2.INTER_CUBIC)
+    image_aug = cv2.resize(image_aug, (284, 284), interpolation=cv2.INTER_CUBIC)
     
     image_aug = np.array(image_aug,dtype = np.float32)
 

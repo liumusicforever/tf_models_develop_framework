@@ -24,7 +24,7 @@ example_text = '''example:
 python3 tools/generate_facenet_feature.py --log_dir experiments/facenet_inception_resnet_v1 --data_dir /root/data/
 
 '''
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 def parse_args():
@@ -44,26 +44,34 @@ def parse_args():
     return args
 
 
-def gen_feat(img_list, image_op, sess, embeddings):
+def gen_feat(img_list,image_op,sess,embeddings):
     feat_list = []
     clss_id_list = []
     cam_id_list = []
-    for i, (img_path, clss_id, cam_id) in enumerate(img_list):
-        print('{}/{}'.format(i, len(img_list)))
+    for i,(img_path,clss_id,cam_id) in enumerate(img_list):
+        print ('{}/{}'.format(i,len(img_list)))
         img = cv2.imread(img_path)
-        img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_CUBIC)
+        img = cv2.resize(img, (284, 284), interpolation=cv2.INTER_CUBIC)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img / 255.0
-        feats = sess.run(embeddings, feed_dict={image_op: [img]})
-        feat_list.append(feats[0])
+        
+        horizontal_img = cv2.flip( img, 1 )
+        
+        feats = sess.run(embeddings,feed_dict = {image_op : [img]})
+        feats_lr = sess.run(embeddings,feed_dict = {image_op : [horizontal_img]})
+        
+        feat = feats+feats_lr
+        feat = feat / np.linalg.norm(feat,axis = 1 , keepdims = True)
+
+        feat_list.append(feat[0])
         clss_id_list.append(clss_id)
         cam_id_list.append(cam_id)
-
+    
     feat_list = np.stack(feat_list)
-
-    print(feat_list.shape)
-
-    return feat_list, clss_id_list, cam_id_list
+    
+    print (feat_list.shape)
+    
+    return feat_list,clss_id_list,cam_id_list
 
 
 def search_by_file_type(path, file_types):
@@ -85,7 +93,7 @@ def main():
     mod_graph, data_iter, params = utils.load_network(args.networks)
 
     # create loss graph
-    image_op = tf.placeholder("float", [None, 224, 224, 3])
+    image_op = tf.placeholder("float", [None, 284, 284, 3])
     label_op = None
 
     mod = mod_graph.model_fn(image_op, label_op,

@@ -7,22 +7,19 @@ import networks.resnet50.params as config
 
 slim = tf.contrib.slim
 
-_R_MEAN = 123.68
-_G_MEAN = 116.78
-_B_MEAN = 103.94
-MEANS = [_R_MEAN, _G_MEAN, _B_MEAN]
-
+MEANS = [0.485, 0.456, 0.406]
+STD =  [0.229, 0.224, 0.225]
 
 def model_fn(features, labels, mode, params):
     """Model function for CNN."""
 
     # Subtracts the given means from each image channel.
-    features.set_shape([None, 224, 224, 3])
+    features.set_shape([None, 284, 284, 3])
     num_channels = features.get_shape().as_list()[-1]
     channels = tf.split(
         axis=3, num_or_size_splits=num_channels, value=features)
     for i in range(num_channels):
-        channels[i] = (channels[i] - (MEANS[i]/255.0))*255.0
+        channels[i] = ((channels[i] - (MEANS[i]))/STD[i])*255.0
     features = tf.concat(axis=3, values=channels)
 
     if mode != tf.estimator.ModeKeys.PREDICT:
@@ -44,7 +41,7 @@ def model_fn(features, labels, mode, params):
                                       {v.name.split(':')[0]: v for v in variables_to_restore})
     net = slim.flatten(net)
 
-    logits = classifier(net, phase_train_placeholder)
+    emb , logits = classifier(net, phase_train_placeholder)
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
@@ -68,12 +65,14 @@ def model_fn(features, labels, mode, params):
         total_loss = tf.reduce_mean(cross_entropy, name='cross_entropy')
 
         learning_rate = tf.train.exponential_decay(config.lr, tf.train.get_global_step(),
-                                                   config.learning_rate_decay_iter, config.learning_rate_decay_factor, staircase=True)
+                                                   config.learning_rate_decay_iter,
+                                                   config.learning_rate_decay_factor,
+                                                   staircase=True)
 
         opt_backbone = tf.train.MomentumOptimizer(
-            learning_rate * 0.1, 0.9, use_nesterov=True)
+            config.lr * 0.1, 0.9, use_nesterov=True)
         opt_lastlayer = tf.train.MomentumOptimizer(
-            learning_rate, 0.9, use_nesterov=True)
+            config.lr , 0.9, use_nesterov=True)
         backbone_vars = [
             i for i in tf.trainable_variables() if 'resnet_v2_50/' in i.name]
         last_vars = [
@@ -120,21 +119,22 @@ def classifier(net, is_training):
                         epsilon=1.0,
                         renorm_decay=0.99):
         net = slim.fully_connected(net,
-                                   2048,
+                                   512,
                                    activation_fn=tf.nn.leaky_relu,
                                    weights_initializer=slim.initializers.xavier_initializer(),
                                    scope='Bottleneck',
                                    reuse=False,
                                    normalizer_fn=slim.batch_norm
                                    )
-        net = slim.dropout(net,
+        emb = slim.dropout(net,
                            keep_prob=0.5,
                            is_training=is_training,
                            scope='dropout')
     with slim.arg_scope([slim.fully_connected]):
-        net = slim.fully_connected(net,
+        net = slim.fully_connected(emb,
                                    config.num_classes,
                                    weights_initializer=tf.truncated_normal_initializer(
                                        stddev=0.01),
+                                   activation_fn=None,
                                    scope='Logits', reuse=False)
-    return net
+    return emb, net

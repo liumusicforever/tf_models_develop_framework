@@ -43,7 +43,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-import networks.facenet_resnet50.resnet_utils as resnet_utils
+import networks.resnet50.resnet_utils as resnet_utils
 
 slim = tf.contrib.slim
 resnet_arg_scope = resnet_utils.resnet_arg_scope
