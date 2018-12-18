@@ -69,22 +69,22 @@ def parser(record):
     
     image = tf.cast(image, tf.float32)
     image = tf.reshape(image, shape=[320, 320, 3])
-    image = tf.random_crop(image,[284,284,3])
+    image = tf.random_crop(image,[280,280,3])
     image = image / 255.0
     label = tf.cast(parsed["label"], tf.int32)
     
     return image, label
 
 seq = iaa.Sequential([
-#     iaa.Crop(px=(0, 16)), # crop images from each side by 0 to 16px (randomly chosen)
+    iaa.Crop(px=(0, 16)), # crop images from each side by 0 to 16px (randomly chosen)
     iaa.Fliplr(0.5), # horizontally flip 50% of the images
-#     iaa.GaussianBlur(sigma=(0, 1.0)) # blur images with a sigma of 0 to 3.0
+    iaa.GaussianBlur(sigma=(0, 1.0)) # blur images with a sigma of 0 to 3.0
 ])
 
 def aug_in_batch(image,label):
     
     image_aug = seq.augment_images([image])[0]
-    image_aug = cv2.resize(image_aug, (224, 224), interpolation=cv2.INTER_CUBIC)
+#     image_aug = cv2.resize(image_aug, (224, 224), interpolation=cv2.INTER_CUBIC)
     
     image_aug = np.array(image_aug,dtype = np.float32)
 
