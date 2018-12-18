@@ -1,8 +1,10 @@
 import os
 import argparse
 import random
+from multiprocessing import Process
 
 import tensorflow as tf
+
 
 
 import lib.utils as utils
@@ -59,15 +61,23 @@ def example_create_tfrecord():
     
     
     random.shuffle(data_list)
+    print ('total image : {}'.format(len(data_list)))
     
+    procs = []
     # split dataset into number of N pack
     for i in range(int(args.split)):
         split_start = int(len(data_list)*i/int(args.split))
         split_end = int(len(data_list)*(i+1)/int(args.split))
         split_list = data_list[split_start:split_end]
         rec_name = '{}.{}'.format(rec_path,i)
-        data_iter.create_tfrecord(rec_name,split_list)
-        print('processing {}/{}'.format(split_end,len(data_list)))
+#         data_iter.create_tfrecord(rec_name,split_list)
+        p = Process(target=data_iter.create_tfrecord, args=(rec_name, split_list))
+        p.start()
+        procs.append(p)
+    for p in procs:
+        p.join()
+        
+         
         
         
 import  networks.yolov2.region_layer as region_layer
@@ -87,14 +97,14 @@ def example_read_tfrecord():
             while True:
                 img , label = sess.run(one_element)
                 img = img[0]
-                prediction = region_layer.lastlayer2detection(label , 0.6)
-                print (prediction)
-                h , w  = img.shape[:2]
+#                 prediction = region_layer.lastlayer2detection(label , 0.6)
+#                 print (prediction)
+#                 h , w  = img.shape[:2]
                 
 
-                for b in prediction[0]:
-                    cv2.rectangle(img,(int(b[2]*w),int(b[3]*h)),(int(b[4]*w),int(b[5]*h)),(55,255,155),5)
-                img = cv2.resize(img, (416,416))
+#                 for b in prediction[0]:
+#                     cv2.rectangle(img,(int(b[2]*w),int(b[3]*h)),(int(b[4]*w),int(b[5]*h)),(55,255,155),5)
+#                 img = cv2.resize(img, (416,416))
 
 
                 cv2.imshow('img',img)
@@ -107,4 +117,4 @@ def example_read_tfrecord():
 
 if __name__ == "__main__":
     example_create_tfrecord()
-    # example_read_tfrecord()
+#     example_read_tfrecord()
