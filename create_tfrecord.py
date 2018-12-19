@@ -78,9 +78,6 @@ def example_create_tfrecord():
         p.join()
         
          
-        
-        
-import  networks.yolov2.region_layer as region_layer
 import cv2
 
     
