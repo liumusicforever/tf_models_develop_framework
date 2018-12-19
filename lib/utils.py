@@ -12,7 +12,12 @@ def load_module(module_path):
 def load_network(network_path):
     
     graph_path = os.path.join(network_path,'graph.py')
+    
+    
     iter_path = os.path.join(network_path,'data.py')
+    if not os.path.exists(iter_path):
+        iter_path = os.path.join(network_path,'../data.py')
+        
     params_path = os.path.join(network_path,'params.py')
     
     assert os.path.exists(graph_path) ,\
